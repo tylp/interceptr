@@ -1,0 +1,11 @@
+[package]
+name = "interceptr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.91"
+crossterm = "0.28.1"
+libc = "0.2.161"
+nfq = "0.2.5"
+ratatui = "0.29.0"
