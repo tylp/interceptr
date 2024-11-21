@@ -1,24 +1,18 @@
 use std::collections::HashMap;
 
-#[derive(Default, Debug, PartialEq, Eq, Hash, Clone)]
-struct Packet {
-    data: Vec<u8>,
+#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+pub struct Packet {
+    data: Vec<u8>
 }
 
-type TransformMap = HashMap<Packet, Packet>;
+type TransformationMap = HashMap<Packet, Packet>;
 
-#[derive(Default, Debug, PartialEq, Eq, Clone)]
-struct RulesHandler {
-    rules: TransformMap,
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct RuleHandler {
+    rules: TransformationMap
 }
 
-impl RulesHandler {
-    pub fn new() -> Self {
-        Self {
-            rules: TransformMap::new(),
-        }
-    }
-
+impl RuleHandler {
     pub fn add_rule(&mut self, src: Packet, dst: Packet) {
         self.rules.insert(src, dst);
     }

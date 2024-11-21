@@ -1,39 +1,91 @@
-use anyhow::{anyhow, Result};
-use std::process::Command;
+use core::error;
+use std::{fmt::Display, process::{Command, ExitStatus}};
+use thiserror::Error;
 
+#[derive(Debug)]
 pub enum Filter {
     Input,
     Output,
-    Forward,
+    Forward
 }
 
-pub fn add_rule(filter: Filter, ip: &str, queue_num: u16) -> Result<()> {
-    // sudo iptables -I INPUT -s 192.168.1.100 -j NFQUEUE --queue-num 0
-    let filter_str = match filter {
-        Filter::Input => "INPUT",
-        Filter::Output => "OUTPUT",
-        Filter::Forward => "FORWARD",
-    };
+#[derive(Debug, Error)]
+pub enum CommandError {
+    #[error("IO error")]
+    IOError(#[from] std::io::Error),
+    #[error("Error with status code `{0}`")]
+    StatusError(i32),
+}
 
+impl Display for Filter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let res = match self {
+            Filter::Input => "INPUT",
+            Filter::Output => "OUTPUT",
+            Filter::Forward => "FORWARD",
+        };
+
+        write!(f, "{}", res)
+    }
+}
+
+pub fn del_ip(ip: &str, link: &str) {
+    let cmd = Command::new("ip")
+        .arg("addr")
+        .arg("add")
+        .arg(ip)
+        .arg("dev")
+        .arg(link);
+}
+
+pub fn add_ip(ip: &str, link: &str) -> Result<(), CommandError> {
+    let cmd = Command::new("ip")
+        .arg("addr")
+        .arg("add")
+        .arg(ip)
+        .arg("dev")
+        .arg(link)
+        .status();
+
+        let status = match cmd {
+            Ok(status) => status,
+            Err(e) => return Err(CommandError::IOError(e))
+        };
+
+
+        match status.success() {
+            true => return Ok(()),
+            false => return Err(CommandError::StatusError(status.code().expect("no status code"))),
+        }
+}
+
+/// Create a rule in the iptables for an ip address to redirect packets to the given queue.
+/// 
+/// Example:
+/// 
+/// ```rust
+/// // Add a rule to send all packets comming from (INPUT) 127.0.0.1 to the NFQUEUE 0.
+/// add_queue_redirection(Filter::INPUT, "127.0.0.1", 0).unwrap().
+/// ```
+pub fn add_queue_redirection(filter: Filter, ip: &str, queue: u16) -> Result<(), CommandError> {
     let cmd = Command::new("iptables")
         .arg("-I")
-        .arg(filter_str)
+        .arg(filter.to_string())
         .arg("-s")
         .arg(ip)
         .arg("-j")
         .arg("NFQUEUE")
         .arg("--queue-num")
-        .arg(queue_num.to_string())
+        .arg(queue.to_string())
         .status();
+    
+    let status = match cmd {
+        Ok(status) => status,
+        Err(e) => return Err(CommandError::IOError(e))
+    };
 
-    match cmd {
-        Ok(status) => {
-            if status.success() {
-                Ok(())
-            } else {
-                Err(anyhow!("Failed to add iptables rule"))
-            }
-        }
-        Err(e) => Err(anyhow!(e)),
+    match status.success() {
+        true => return Ok(()),
+        false => return Err(CommandError::StatusError(status.code().expect("no status code"))),
     }
 }
