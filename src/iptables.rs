@@ -1,5 +1,4 @@
-use core::error;
-use std::{fmt::Display, process::{Command, ExitStatus}};
+use std::{fmt::Display, process::Command};
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -68,7 +67,13 @@ pub fn add_ip(ip: &str, link: &str) -> Result<(), CommandError> {
 /// add_queue_redirection(Filter::INPUT, "127.0.0.1", 0).unwrap().
 /// ```
 pub fn add_queue_redirection(filter: Filter, ip: &str, queue: u16) -> Result<(), CommandError> {
-    let cmd = Command::new("iptables")
+
+    println!("Running command 'iptables -I {filter} -s {ip} -j NFQUEUE --queue-num {queue}'");
+    println!("Queue num: {}", queue.to_string());
+
+
+    let cmd = Command::new("sudo")
+        .arg("iptables")
         .arg("-I")
         .arg(filter.to_string())
         .arg("-s")
@@ -81,7 +86,9 @@ pub fn add_queue_redirection(filter: Filter, ip: &str, queue: u16) -> Result<(),
     
     let status = match cmd {
         Ok(status) => status,
-        Err(e) => return Err(CommandError::IOError(e))
+        Err(e) =>  {
+            return Err(CommandError::IOError(e))
+        }
     };
 
     match status.success() {
