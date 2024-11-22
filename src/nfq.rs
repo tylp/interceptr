@@ -7,20 +7,17 @@ pub enum CreateQueueError {
     #[error("Error while trying to open the queue {0}")]
     OpenError(u16),
     #[error("Error while trying to bind the queue {0}")]
-    BindError(u16)
+    BindError(u16),
 }
 
 /// Create and binds an nfqueue with a given number.
-/// Listen and apply defined rules to the incomming messages on this queue
-/// trough a tokio task.
 pub fn create_queue(queue_num: u16) -> Result<Queue, CreateQueueError> {
-
     println!("Creating queue with number {queue_num}");
     let mut queue = match Queue::open() {
         Ok(queue) => queue,
         Err(e) => {
             eprintln!("{e}");
-            return Err(CreateQueueError::OpenError(queue_num))
+            return Err(CreateQueueError::OpenError(queue_num));
         }
     };
 
@@ -41,7 +38,7 @@ pub fn listen_queue(mut queue: Queue) -> JoinHandle<()> {
                 Err(e) => {
                     eprintln!("{e}");
                     return;
-                },
+                }
             };
 
             let payload = msg.get_payload();
@@ -49,10 +46,13 @@ pub fn listen_queue(mut queue: Queue) -> JoinHandle<()> {
             let timestamp = msg.get_timestamp();
             let packet_id = msg.get_packet_id();
 
-            println!("Received packet: 
+            println!(
+                "Received packet: 
             id: {},
             queue_num: {},
-            payload: {:02X?}", packet_id, queue_num, payload);
+            payload: {:02X?}",
+                packet_id, queue_num, payload
+            );
 
             msg.set_verdict(Verdict::Accept);
             if let Err(e) = queue.verdict(msg) {
